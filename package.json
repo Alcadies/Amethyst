@@ -1,0 +1,21 @@
+{
+  "name": "amethyst",
+  "description": "Bot for Project Everdawn",
+  "version": "0.0.0",
+  "engines": {
+    "node": "16.x"
+  },
+  "main": "amethyst.js",
+  "scripts": {
+    "start": "node amethyst"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^0.2.0-canary.0",
+    "discord-api-types": "^0.26.1",
+    "discord.js": "^13.6.0",
+    "dotenv": "^14.2.0",
+    "eslint": "^8.7.0",
+    "string-similarity": "3.0.0",
+    "winston": "2.4.0"
+  }
+}
