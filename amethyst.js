@@ -203,12 +203,16 @@ async function raidBan(message, messageMember) {
             days: 1,
             reason: "Mention spam from non-member"
         });
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.displayAvatarURL()).addField("Banned", "Automatically banned for mention spam")] });
     }
     const count = message.channel.messages.filter(m => m.author.id === message.author.id && m.createdTimestamp > Date.now() - 2000).size;
-    if(count > 5) messageMember.guild.members.ban(message.author, {
-        days: 1,
-        reason: "Message spam from non-member"
-    });
+    if(count > 5) {
+        messageMember.guild.members.ban(message.author, {
+            days: 1,
+            reason: "Message spam from non-member"
+        });
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.displayAvatarURL()).addField("Banned", "Automatically banned for message spam")] });
+    }
 }
 
 async function mute(interaction) {
@@ -223,18 +227,24 @@ async function mute(interaction) {
         for (var x = 1; x < logs.split("\n").length; x++) {
             if (!logs.split("\n")[x].includes(interaction.options.getUser('member').id)) { newLog += "\n" + logs.split("\n")[x]; }
         }
-        await logMessage.edit(newLog);
+        await muteLog.edit(newLog);
     }
     d = new Date();
     unmuteTime = muteHours * 3600000 + d.getTime();
     await muteLog.edit(muteLog.content + "\n" + interaction.options.getUser('member').id + " " + unmuteTime);
     muteLog = await bot.channels.cache.get(logsChannel).messages.fetch("934067351199031357");
-    interaction.reply("Member " + muteMember.displayName + " (id " + interaction.options.getUser('member').id + ") muted for " + muteHours + " hours.");
+    theLog = new Discord.MessageEmbed().setAuthor(muteMember.displayName + " (" + muteMember.id + ")", muteMember.displayAvatarURL()).addField("Muted", "For " + muteHours + " hours.");
+    //interaction.reply("Member " + muteMember.displayName + " (id " + interaction.options.getUser('member').id + ") muted for " + muteHours + " hours.");
     await muteMember.roles.add(message.guild.roles.cache.get(muteRole));
     var muteMessage = "You have been muted for " + muteHours + " hours";
-    if (interaction.options.getString('reason')) { muteMessage += " for \"" + interaction.options.getString('reason') + "\""; }
+    if (interaction.options.getString('reason')) {
+        muteMessage += " for \"" + interaction.options.getString('reason') + "\"";
+        theLog.addField("Reason:", interaction.options.getString('reason'));
+    }
     else { muteMessage += "."; }
+    interaction.reply({ embeds: [theLog] })
     await muteMember.send(muteMessage);
+    bot.channels.cache.get(logsChannel).send({ embeds: [theLog]})
 }
 
 async function unmute(id) {
@@ -518,6 +528,52 @@ bot.on("guildMemberUpdate", function(oldMember, newMember) {
             }
         }
         theLog.addField("Role change:", theMessage);
+    }
+    if (!oldMember.isCommunicationDisabled() && newMember.isCommunicationDisabled()) {
+        theLog.addField("Update:", "Was given a timeout");
+    }
+    if (oldMember.isCommunicationDisabled() && !newMember.isCommunicationDisabled()) {
+        theLog.addField("Update:", "Is no longer in timeout");
+    }
+    bot.channels.cache.get(logsChannel).send({ embeds: [theLog] });
+})
+
+bot.on("guildBanRemove", async function(ban) {
+    if (ban.partial) {
+        ban.fetch();
+    }
+    let theLog = new Discord.MessageEmbed().setAuthor(ban.username + " (" + ban.id + ")", ban.displayAvatarURL).setTitle("Unbanned")
+    const entry = await ban.guild.fetchAuditLogs({type: 'MEMBER_BAN_REMOVE'}).then(audit => audit.entries.first())
+    if (entry != null && (entry.target.id === ban.user.id) && (entry.createdTimestamp > (Date.now() - 5000))) {
+        theLog.setFooter("by " + entry.executor.username, entry.executor.displayAvatarURL());
+    }
+    bot.channels.cache.get(logsChannel).send({ embeds: [theLog]});
+})
+
+bot.on("guildBanAdd", async function(ban) {
+    if (ban.partial) {
+        ban.fetch();
+    }
+    let theLog = new Discord.MessageEmbed().setAuthor(ban.username + " (" + ban.id + ")", ban.displayAvatarURL).setTitle("Unbanned")
+    const entry = await ban.guild.fetchAuditLogs({type: 'MEMBER_BAN_ADD'}).then(audit => audit.entries.first())
+    if (entry != null && (entry.target.id === ban.user.id) && (entry.createdTimestamp > (Date.now() - 5000))) {
+        theLog.setFooter("by " + entry.executor.username, entry.executor.displayAvatarURL());
+    }
+    bot.channels.cache.get(logsChannel).send({ embeds: [theLog]});
+})
+
+bot.on("voiceStateUpdate", function(oldState, newState) {
+    if (oldState.serverMute && !newState.serverMute) {
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(oldState.username + " (" + oldState.id + ")", oldState.displayAvatarURL()).addField("Voice update:", "Unmuted")] });
+    }
+    if (!oldState.serverMute && newState.serverMute) {
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(oldState.username + " (" + oldState.id + ")", oldState.displayAvatarURL()).addField("Voice update:", "Muted")] });
+    }
+    if (oldState.serverDeaf && !newState.serverDeaf) {
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(oldState.username + " (" + oldState.id + ")", oldState.displayAvatarURL()).addField("Voice update:", "Undeafened")] });
+    }
+    if (!oldState.serverMute && newState.serverMute) {
+        bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(oldState.username + " (" + oldState.id + ")", oldState.displayAvatarURL()).addField("Voice update:", "Deafened")] });
     }
 })
 
