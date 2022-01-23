@@ -339,6 +339,8 @@ bot.on("messageCreate", async function(message) {
 
     let messageMember = await message.channel.guild.members.fetch(message.author);
 
+    await raidBan(message, messageMember);
+
     await badWordsReporter(message, messageMember, false);
 })
 
@@ -445,6 +447,78 @@ bot.on("guildMemberAdd", function(member) {
     var d = new Date();
     var newBlood = new Discord.MessageEmbed().setAuthor(member.displayName + " (" + member.id + ")", member.user.displayAvatarURL()).addField("Joined", d.toString()).setColor('GREEN');
     bot.channels.cache.get(logsChannel).send({ embeds: [newBlood] });
+})
+
+bot.on("guildMemberUpdate", function(oldMember, newMember) {
+    let reporting = false;
+    let theLog = new Discord.MessageEmbed().setAuthor(oldMember.displayName + " (" + oldMember.id + ") ", oldMember.displayAvatarURL());
+    if (oldMember.displayAvatarURL != newMember.displayAvatarURL) {
+        reporting = true;
+        theLog.addField("Update:", "New avatar").setThumbnail(oldMember.displayAvatarURL());
+    }
+    if (oldMember.displayName != newMember.displayName) {
+        reporting = true;
+        theLog.addField("New name:", newMember.displayName);
+    }
+    if (!oldMember.roles.cache.equals(newMember.roles.cache)) {
+        reporting = true;
+        let newRoles = [];
+        let oldRoles = [];
+        let diff = oldMember.roles.cache.difference(newMember.roles.cache);
+        diff.forEach((role) => {
+            if (oldMember.roles.cache.has(role)) {
+                oldRoles.push(role.name);
+            }
+            else {
+                newRoles.push(role.name);
+            }
+        })
+        let theMessage = "";
+        if (newRoles) {
+            if (newRoles.length > 1) {
+                theMessage += "Added roles: "
+                for (var i = 0; i < newRoles.length; i++) {
+                    theMessage += newRoles[i];
+                    if (i < newRoles.length - 1) {
+                        theMessage += ", ";
+                        if (i == newRoles.length - 2) {
+                            theMessage += " and ";
+                        }
+                    }
+                    else {
+                        theMessage += "."
+                    }
+                }
+            }
+            else {
+                theMessage += "Added role: " + newRoles[0];
+            }
+        }
+        if (oldRoles) {
+            if (theMessage) {
+                theMessage += "\n";
+            }
+            if (oldRoles.length > 1) {
+                theMessage += "Removed roles: "
+                for (var j = 0; j < oldRoles.length; j++) {
+                    theMessage += oldRoles[j];
+                    if (j < oldRoles.length - 1) {
+                        theMessage += ", ";
+                        if (j == oldRoles.length - 2) {
+                            theMessage += " and ";
+                        }
+                    }
+                    else {
+                        theMessage += ".";
+                    }
+                }
+            }
+            else {
+                theMessage += "Removed role: " + oldRoles[0];
+            }
+        }
+        theLog.addField("Role change:", theMessage);
+    }
 })
 
 bot.login(process.env.token)
