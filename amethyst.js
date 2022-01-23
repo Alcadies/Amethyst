@@ -20,6 +20,10 @@ var botCommands = "";
 var guildID = ["887540443187920906", "804952338669240330", "531433553225842700"]; //public server, internal server, test server
 var logsChannel = "922573873352966214";
 var muteRole = "932059486909259817";
+var roleId = ["922349166699614208", "932360656093605968", "932361184173232148"];
+var roleReact = ["🎉", "twitch", "update"];
+var roleMessageId = ["933178745446076456", "933178747622944799", "933178747622944799"];
+var roleMessage = []
 var muteLog;
 var deleteList;
 var reportList;
@@ -86,6 +90,9 @@ bot.once("ready", async function () {
             }],
         },
     ];
+    for (var x = 0; x < roleMessageId.length; x++) {
+        roleMessage[x] = await bot.channels.cache.get("922348688158908527").messages.fetch(roleMessageId[x]);
+    }
 
     await bot.guilds.cache.get(guildID[0]).commands.permissions.set({ fullPermissions });
     //statusMessage();
@@ -403,9 +410,9 @@ bot.on("messageUpdate", async function(oldMessage, newMessage) {
     if (newMessage.channel.guild.id != guildID[0]) {return;}
     if (!newMessage.author) {return;}
     if (newMessage.author.bot) {
-        if (!oldMessage.partial && newMessage.author.id == bot.user.id && oldMessage.content != newMessage.content) {
-            bot.channels.cache.get("695205182971052103").send({ embeds: [new Discord.MessageEmbed().setThumbnail(bot.user.displayAvatarURL()).setTitle("Edited message from " + bot.user.displayName + " (" + oldMessage.author.id + ")").addField("Channel:", oldMessage.channel).addField("Original Message:", oldMessage.content).addField("New Message:", newMessage.content).setColor('BLUE')] });
-        }
+        /*if (!oldMessage.partial && newMessage.author.id == bot.user.id && oldMessage.content != newMessage.content) {
+            bot.channels.cache.get("695205182971052103").send({ embeds: [new Discord.MessageEmbed().setThumbnail(bot.user.displayAvatarURL()).setTitle("Edited message from " + bot.user.displayName + " (" + oldMessage.author.id + ")").addField("Channel:", "<#" + oldMessage.channel.id + ">").addField("Original Message:", oldMessage.content).addField("New Message:", newMessage.content).setColor('BLUE')] });
+        }*/
         return;
     }
 	var deleteLog = ""
@@ -574,6 +581,15 @@ bot.on("voiceStateUpdate", function(oldState, newState) {
     }
     if (!oldState.serverMute && newState.serverMute) {
         bot.channels.cache.get(logsChannel).send({ embeds: [new Discord.MessageEmbed().setAuthor(oldState.username + " (" + oldState.id + ")", oldState.displayAvatarURL()).addField("Voice update:", "Deafened")] });
+    }
+})
+
+bot.on("messageReactionAdd", async function(messageReaction, user) {
+    if (roleMessageId.includes(messageReaction.message.id)) {
+        member = await messageReaction.message.guild.members.fetch(user);
+        if(roleReact.includes(messageReaction.emoji.name) && messageReaction.message.id == roleMessageId[roleReact.indexOf(messageReaction.emoji.name)]) {
+            member.roles.add(roleId[roleReact.indexOf(messageReaction.emoji.name)]);
+        }
     }
 })
 
