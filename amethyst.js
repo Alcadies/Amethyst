@@ -22,7 +22,7 @@ var logsChannel = "922573873352966214";
 var muteRole = "932059486909259817";
 var roleId = ["922349166699614208", "932360656093605968", "932361184173232148"];
 var roleReact = ["🎉", "twitch", "update"];
-var roleMessageId = ["933178745446076456", "933178747622944799", "933178747622944799"];
+var roleMessageId = ["935368924713877595", "935368924713877595", "935368924713877595"];
 var roleMessage = []
 var muteLog;
 var deleteList;
@@ -106,30 +106,37 @@ bot.once("ready", async function () {
 }*/
 
 function badWordsReporter(message, messageMember, isEdit) {
-    let messageCon = message.content.toLowerCase();
-    if (message.author.bot) {return;}
-    let badWordsLog = "";
-    var reporting = false;
-    for (var i = 1; i < exceptionList.content.split("\n").length; i++) {
-        messageCon = messageCon.replaceAll(exceptionList.content.split("\n")[i], "");
-    }
-    for (var j = 1; j < deleteList.content.split("\n").length; j++) {
-        if (messageCon.includes(deleteList.content.split("\n")[j])) {
-            message.delete();
-            reporting = true;
+    try {
+        let messageCon = " " + message.content.toLowerCase() + " ";
+        if (!message.author) {return;}
+        if (message.author.bot) {return;}
+        if (message.channel.parentId == "922349053403082813") {return;}
+        let badWordsLog = "";
+        var reporting = false;
+        for (var i = 1; i < exceptionList.content.split("\n").length; i++) {
+            messageCon = messageCon.replaceAll(exceptionList.content.split("\n")[i], "");
+        }
+        for (var j = 1; j < deleteList.content.split("\n").length; j++) {
+            if (messageCon.includes(deleteList.content.split("\n")[j])) {
+                message.delete();
+                reporting = true;
+            }
+        }
+        for (var k = 1; k < reportList.content.split("\n").length; k++) {
+            if (messageCon.includes(reportList.content.split("\n")[k])) {
+                reporting = true;
+            }
+        }
+        if (reporting) {
+            badWordsLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL()).setTitle("Questionable Content:").addField(messageMember.displayName + " (" + message.author.id + ")", message.channel + ": " + message.content).setColor('RED');
+            if (isEdit) {
+                badWordsLog.setFooter("This is an edit.")
+            }
+            bot.channels.cache.get(logsChannel).send({ embeds: [badWordsLog] });
         }
     }
-    for (var k = 1; k < reportList.content.split("\n").length; k++) {
-        if (messageCon.includes(reportList.content.split("\n")[k])) {
-            reporting = true;
-        }
-    }
-    if (reporting) {
-        badWordsLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL()).setTitle("Questionable Content:").addField(messageMember.displayName + " (" + message.author.id + ")", message.channel + ": " + message.content).setColor('RED');
-        if (isEdit) {
-            badWordsLog.setFooter("This is an edit.")
-        }
-        bot.channels.cache.get(logsChannel).send({ embeds: [badWordsLog] });
+    catch(err) {
+        logger.error("Something went wrong reporting message: " + message.url);
     }
 }
 
@@ -138,67 +145,72 @@ function selfCleaner(message) {
 }
 
 async function deleteReporter(message) {
-    if (!message.guild) {return;}
-    if (!message.guild.available) {return;}
-    if (message.guild.id != guildID[0]) {return;}
-    if (message.system) {return;}
-    if (message.author.bot) {
-        if (message.author.id == bot.user.id && logsChannel == message.channel.id) {
-            message.channel.send("One of my logs was deleted from here.");
+    try {
+        if (!message.guild) {return;}
+        if (!message.guild.available) {return;}
+        if (message.guild.id != guildID[0]) {return;}
+        if (message.system) {return;}
+        if (message.author.bot) {
+            if (message.author.id == bot.user.id && logsChannel == message.channel.id) {
+                message.channel.send("One of my logs was deleted from here.");
+            }
+            return;
         }
-        return;
-    }
-    var channelToNotify = logsChannel;
-    const entry = await message.guild.fetchAuditLogs({type: 'MESSAGE_DELETE'}).then(audit => audit.entries.first())
-    let user = ""
-    if (entry.extra.channel.id === message.channel.id
-      && (entry.target.id === message.author.id)
-      && (entry.createdTimestamp > (Date.now() - 5000))
-      && (entry.extra.count >= 1)) {
-        user = entry.executor;
-    } else {
-        user = message.author;
-    }
-    var deleteLog;
-    var attachmessage = "";
-    var attaches = [...message.attachments.values()];
-    var attachnames = "";
-    for (i = 0; i < attaches.length; i++) {
-        if (i == attaches.length -1 && i != 0) {attachnames += "and ";}
-        attachnames += attaches[i].proxyURL
-        if (i != attaches.length -1 && attaches.length != 2) {attachnames += ", ";}
-        if (i != attaches.length -1 && attaches.length == 2) {attachnames += " ";}
-    }
-    if (attaches.length > 1) {attachmessage = " with attachments " + attachnames;}
-    if (attaches.length == 1) {attachmessage = " with an attachment " + attachnames;}
-    messageMember = message.author.username;
-    if (message.guild.members.cache.has(message.author.id)) { messageMember = await message.guild.members.fetch(message.author); }
-    var deleteMember = await message.guild.members.fetch(user);
-    if (messageMember.id == deleteMember.id) {
-        deleteLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL());
-    }
-    else {
-        deleteLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL()).setFooter("Deleted by " + deleteMember.displayName + " (" + deleteMember.id + ")", deleteMember.user.displayAvatarURL());
-    }
-    if (message.content.length < 1024) { deleteLog.addField("Deletion", "<#" + message.channel.id + ">: " + message.content); }
-    else {
-        deleteLog.addField("Deletion", "<#" + message.channel.id + ">: " + message.content.substring(0, 1000)).addField("Deletion cont.", message.content.substring(1000, 2000));
-        if (message.content.length > 2000) {
-            deleteLog.addField("Deletion cont.", message.content.substring(2000, 3000));
-            if (message.content.length > 3000) {
-                deleteLog.addField("Deletion cont.", message.content.substring(3000));
+        var channelToNotify = logsChannel;
+        const entry = await message.guild.fetchAuditLogs({type: 'MESSAGE_DELETE'}).then(audit => audit.entries.first())
+        let user = ""
+        if (entry.extra.channel.id === message.channel.id
+          && (entry.target.id === message.author.id)
+          && (entry.createdTimestamp > (Date.now() - 5000))
+          && (entry.extra.count >= 1)) {
+            user = entry.executor;
+        } else {
+            user = message.author;
+        }
+        var deleteLog;
+        var attachmessage = "";
+        var attaches = [...message.attachments.values()];
+        var attachnames = "";
+        for (i = 0; i < attaches.length; i++) {
+            if (i == attaches.length -1 && i != 0) {attachnames += "and ";}
+            attachnames += attaches[i].proxyURL
+            if (i != attaches.length -1 && attaches.length != 2) {attachnames += ", ";}
+            if (i != attaches.length -1 && attaches.length == 2) {attachnames += " ";}
+        }
+        if (attaches.length > 1) {attachmessage = " with attachments " + attachnames;}
+        if (attaches.length == 1) {attachmessage = " with an attachment " + attachnames;}
+        messageMember = message.author.username;
+        if (message.guild.members.cache.has(message.author.id)) { messageMember = await message.guild.members.fetch(message.author); }
+        var deleteMember = await message.guild.members.fetch(user);
+        if (messageMember.id == deleteMember.id) {
+            deleteLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL());
+        }
+        else {
+            deleteLog = new Discord.MessageEmbed().setAuthor(messageMember.displayName + " (" + messageMember.id + ")", messageMember.user.displayAvatarURL()).setFooter("Deleted by " + deleteMember.displayName + " (" + deleteMember.id + ")", deleteMember.user.displayAvatarURL());
+        }
+        if (message.content.length < 1024) { deleteLog.addField("Deletion", "<#" + message.channel.id + ">: " + message.content); }
+        else {
+            deleteLog.addField("Deletion", "<#" + message.channel.id + ">: " + message.content.substring(0, 1000)).addField("Deletion cont.", message.content.substring(1000, 2000));
+            if (message.content.length > 2000) {
+                deleteLog.addField("Deletion cont.", message.content.substring(2000, 3000));
+                if (message.content.length > 3000) {
+                    deleteLog.addField("Deletion cont.", message.content.substring(3000));
+                }
             }
         }
+        if (attaches.length == 0) {
+            bot.channels.cache.get(channelToNotify).send({ embeds: [deleteLog] });
+        }
+        else if (attaches.length == 1) {
+            deleteLog.setImage(attaches[0].proxyURL);
+            bot.channels.cache.get(channelToNotify).send({ embeds: [deleteLog] });
+        }
+        else {
+            bot.channels.cache.get(channelToNotify).send({ content: "The following " + attachmessage, embeds: [deleteLog]});
+        }
     }
-    if (attaches.length == 0) {
-        bot.channels.cache.get(channelToNotify).send({ embeds: [deleteLog] });
-    }
-    else if (attaches.length == 1) {
-        deleteLog.setImage(attaches[0].proxyURL);
-        bot.channels.cache.get(channelToNotify).send({ embeds: [deleteLog] });
-    }
-    else {
-        bot.channels.cache.get(channelToNotify).send({ content: "The following " + attachmessage, embeds: [deleteLog]});
+    catch(err) {
+        logger.error("Something went wrong logging deleted message: " + message.content)
     }
 }
 
@@ -288,6 +300,14 @@ async function ban(message, isMod) {
 async function updateWords(interaction) {
     if (!interaction.memberPermissions.has("MANAGE_SERVER")) {return;}
     var theLog;
+    let theWord = ""
+    if (interaction.options.getBoolean('leading-space')) {
+        theWord += " ";
+    }
+    theWord += interaction.options.getString('word');
+    if (interaction.options.getBoolean('trailing-space')) {
+        theWord += " ";
+    }
     switch (interaction.options.getString('type')) {
         case "delete":
         theLog = deleteList;
@@ -295,27 +315,27 @@ async function updateWords(interaction) {
         case "report":
         theLog = reportList;
         break;
-        case "exception":
+        case "exceptions":
         theLog = exceptionList;
         break;
     }
     if (interaction.options.getString('action') == "add") {
-        await theLog.edit(theLog.content + "\n" + interaction.options.getString('word').toLowerCase());
-        interaction.reply({ content: "`" + interaction.options.getString('word') + "` successfully added to the " + interaction.options.getString('type') + " list.", ephemeral: true });
+        await theLog.edit(theLog.content + "\n" + theWord.toLowerCase());
+        interaction.reply({ content: "`" + theWord + "` successfully added to the " + interaction.options.getString('type') + " list.", ephemeral: true });
     }
     else {
-        if (theLog.content.includes("\n" + interaction.options.getString('word').toLowerCase())) {
+        if (theLog.content.includes("\n" + theWord.toLowerCase())) {
             let newLog = theLog.content.split("\n")[0];
             for (x = 1; x < theLog.content.split("\n").length; x++) {
-                if (theLog.content.split("\n")[x] != interaction.options.getString('word').toLowerCase()) {
+                if (theLog.content.split("\n")[x] != theWord.toLowerCase()) {
                     newLog += "\n" + theLog.content.split("\n")[x];
                 }
             }
             await theLog.edit(newLog);
-            interaction.reply({ content: "`" + interaction.options.getString('word') + "` successfully removed from the " + interaction.options.getString('type') + " list.", ephemeral: true });
+            interaction.reply({ content: "`" + theWord + "` successfully removed from the " + interaction.options.getString('type') + " list.", ephemeral: true });
         }
         else {
-            interaction.reply({ content: "`" + interaction.options.getString('word') + "` not found on the " + interaction.options.getString('type') + " list.  Please confirm you typed it exactly as it appears, including all special characters (though not case sensitive).", ephemeral: true });
+            interaction.reply({ content: "`" + theWord + "` not found on the " + interaction.options.getString('type') + " list.  Please confirm you typed it exactly as it appears, including all special characters (though not case sensitive).", ephemeral: true });
         }
     }
     deleteList = await bot.channels.cache.get("922350419005558834").messages.fetch("934010882965512232");
@@ -350,7 +370,7 @@ bot.on("messageCreate", async function(message) {
 
     if (message.channel.guild.id != guildID[0]) {return;}
 
-    if (message.system || !message.channel.guild.members.cache.has(message.author)) {return;}
+    if (message.system || !message.channel.guild.members.cache.has(message.author.id)) {return;}
 
     if (message.author.bot) {return;}
 
@@ -434,7 +454,7 @@ bot.on("messageUpdate", async function(oldMessage, newMessage) {
         if (newMessage.content.length < 1024) { deleteLog.addField("New Message:", newMessage.content) }
         else { deleteLog.addField("New Message:", newMessage.content.substring(0, 1000)).addField("New Message cont.:", newMessage.content.substring(1000))}
     }
-	await bot.channels.cache.get(channelToNotify).send({ embeds: [deleteLog] });
+	await bot.channels.cache.get(logsChannel).send({ embeds: [deleteLog] });
 })
 
 bot.on("guildMemberRemove", async function(member) {
@@ -466,83 +486,104 @@ bot.on("guildMemberAdd", function(member) {
     bot.channels.cache.get(logsChannel).send({ embeds: [newBlood] });
 })
 
+bot.on("userUpdate", async function(oldUser, newUser) {
+    try {
+        if (!bot.guilds.cache.get(guildID[0]).members.cache.has(oldUser.id) || !bot.guilds.cache.get(guildID[0]).members.cache.has(newUser.id)) {return;}
+        newMember = await bot.guilds.cache.get(guildID[0]).members.fetch(newUser.id);
+        let reporting = false;
+        let theLog = new Discord.MessageEmbed().setAuthor(newMember.displayName + " (" + newMember.id + ") ", oldUser.displayAvatarURL());
+        if (oldUser.displayAvatarURL != newUser.displayAvatarURL) {
+            reporting = true;
+            theLog.addField("Update:", "New avatar").setThumbnail(newUser.displayAvatarURL());
+        }
+    }
+    catch(err) {
+        logging.error("Something went wrong reporting updates to user " + oldUser.id)
+    }
+})
+
 bot.on("guildMemberUpdate", function(oldMember, newMember) {
-    let reporting = false;
-    let theLog = new Discord.MessageEmbed().setAuthor(oldMember.displayName + " (" + oldMember.id + ") ", oldMember.displayAvatarURL());
-    if (oldMember.displayAvatarURL != newMember.displayAvatarURL) {
-        reporting = true;
-        theLog.addField("Update:", "New avatar").setThumbnail(oldMember.displayAvatarURL());
-    }
-    if (oldMember.displayName != newMember.displayName) {
-        reporting = true;
-        theLog.addField("New name:", newMember.displayName);
-    }
-    if (!oldMember.roles.cache.equals(newMember.roles.cache)) {
-        reporting = true;
-        let newRoles = [];
-        let oldRoles = [];
-        let diff = oldMember.roles.cache.difference(newMember.roles.cache);
-        diff.forEach((role) => {
-            if (oldMember.roles.cache.has(role)) {
-                oldRoles.push(role.name);
-            }
-            else {
-                newRoles.push(role.name);
-            }
-        })
-        let theMessage = "";
-        if (newRoles) {
-            if (newRoles.length > 1) {
-                theMessage += "Added roles: "
-                for (var i = 0; i < newRoles.length; i++) {
-                    theMessage += newRoles[i];
-                    if (i < newRoles.length - 1) {
-                        theMessage += ", ";
-                        if (i == newRoles.length - 2) {
-                            theMessage += " and ";
+    try {
+        let reporting = false;
+        let theLog = new Discord.MessageEmbed().setAuthor(oldMember.displayName + " (" + oldMember.id + ") ", oldMember.displayAvatarURL());
+        if (oldMember.displayAvatarURL != newMember.displayAvatarURL) {
+            reporting = true;
+            theLog.addField("Update:", "New avatar").setThumbnail(oldMember.displayAvatarURL());
+        }
+        if (oldMember.displayName != newMember.displayName) {
+            reporting = true;
+            theLog.addField("New name:", newMember.displayName);
+        }
+        if (!oldMember.roles.cache.equals(newMember.roles.cache)) {
+            reporting = true;
+            let newRoles = [];
+            let oldRoles = [];
+            let diff = oldMember.roles.cache.difference(newMember.roles.cache);
+            diff.forEach((role) => {
+                if (oldMember.roles.cache.has(role.id)) {
+                    oldRoles.push(role);
+                }
+                else {
+                    newRoles.push(role);
+                }
+            })
+            let theMessage = "";
+            if (newRoles.length > 0) {
+                if (newRoles.length > 1) {
+                    theMessage += "Added roles: "
+                    for (var i = 0; i < newRoles.length; i++) {
+                        theMessage += "<@&" + newRoles[i].id + ">";
+                        if (i < newRoles.length - 1) {
+                            theMessage += ", ";
+                            if (i == newRoles.length - 2) {
+                                theMessage += " and ";
+                            }
+                        }
+                        else {
+                            theMessage += "."
                         }
                     }
-                    else {
-                        theMessage += "."
-                    }
+                }
+                else {
+                    theMessage += "Added role: <@&" + newRoles[0].id + ">";
                 }
             }
-            else {
-                theMessage += "Added role: " + newRoles[0];
-            }
-        }
-        if (oldRoles) {
-            if (theMessage) {
-                theMessage += "\n";
-            }
-            if (oldRoles.length > 1) {
-                theMessage += "Removed roles: "
-                for (var j = 0; j < oldRoles.length; j++) {
-                    theMessage += oldRoles[j];
-                    if (j < oldRoles.length - 1) {
-                        theMessage += ", ";
-                        if (j == oldRoles.length - 2) {
-                            theMessage += " and ";
+            if (oldRoles.length > 0) {
+                if (theMessage) {
+                    theMessage += "\n";
+                }
+                if (oldRoles.length > 1) {
+                    theMessage += "Removed roles: "
+                    for (var j = 0; j < oldRoles.length; j++) {
+                        theMessage += "<@&" + oldRoles[j].id + ">";
+                        if (j < oldRoles.length - 1) {
+                            theMessage += ", ";
+                            if (j == oldRoles.length - 2) {
+                                theMessage += " and ";
+                            }
+                        }
+                        else {
+                            theMessage += ".";
                         }
                     }
-                    else {
-                        theMessage += ".";
-                    }
+                }
+                else {
+                    theMessage += "Removed role: <@&" + oldRoles[0].id + ">";
                 }
             }
-            else {
-                theMessage += "Removed role: " + oldRoles[0];
-            }
+            theLog.addField("Role change:", theMessage);
         }
-        theLog.addField("Role change:", theMessage);
+        if (!oldMember.isCommunicationDisabled() && newMember.isCommunicationDisabled()) {
+            theLog.addField("Update:", "Was given a timeout");
+        }
+        if (oldMember.isCommunicationDisabled() && !newMember.isCommunicationDisabled()) {
+            theLog.addField("Update:", "Is no longer in timeout");
+        }
+        bot.channels.cache.get(logsChannel).send({ embeds: [theLog] });
     }
-    if (!oldMember.isCommunicationDisabled() && newMember.isCommunicationDisabled()) {
-        theLog.addField("Update:", "Was given a timeout");
+    catch(err) {
+        logging.error("Something went wrong reporting update to member " + newMember.id)
     }
-    if (oldMember.isCommunicationDisabled() && !newMember.isCommunicationDisabled()) {
-        theLog.addField("Update:", "Is no longer in timeout");
-    }
-    bot.channels.cache.get(logsChannel).send({ embeds: [theLog] });
 })
 
 bot.on("guildBanRemove", async function(ban) {
@@ -589,6 +630,15 @@ bot.on("messageReactionAdd", async function(messageReaction, user) {
         member = await messageReaction.message.guild.members.fetch(user);
         if(roleReact.includes(messageReaction.emoji.name) && messageReaction.message.id == roleMessageId[roleReact.indexOf(messageReaction.emoji.name)]) {
             member.roles.add(roleId[roleReact.indexOf(messageReaction.emoji.name)]);
+        }
+    }
+})
+
+bot.on("messageReactionRemove", async function(messageReaction, user) {
+    if (roleMessageId.includes(messageReaction.message.id)) {
+        member = await messageReaction.message.guild.members.fetch(user);
+        if(roleReact.includes(messageReaction.emoji.name) && messageReaction.message.id == roleMessageId[roleReact.indexOf(messageReaction.emoji.name)]) {
+            member.roles.remove(roleId[roleReact.indexOf(messageReaction.emoji.name)]);
         }
     }
 })

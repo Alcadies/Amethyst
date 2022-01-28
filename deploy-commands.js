@@ -18,7 +18,13 @@ const guildCommands = [
 			.addChoice("Exceptions", "exceptions")).addStringOption(option =>
 		option.setName('word')
 			.setDescription("Which word or phrase to add to or remove from the list.")
-			.setRequired(true)),
+			.setRequired(true)).addBooleanOption(option =>
+		option.setName('leading-space')
+			.setDescription("Whether to add a space beforehand")
+			.setRequired(false)).addBooleanOption(option =>
+		option.setName('trailing-space')
+			.setDescription("Whether to add a space afterwards")
+			.setRequired(false)),
 	new SlashCommandBuilder().setName('mute').setDescription('Mutes a member').setDefaultPermission(false).addUserOption(option =>
 		option.setName('member')
 			.setDescription("Who to mute")
